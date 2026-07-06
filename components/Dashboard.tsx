@@ -1,7 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { extremeFlag } from "@/lib/screener";
 import type { Digest, TickerSnapshot, Window } from "@/lib/types";
 import { ScreenerToggle } from "./ScreenerToggle";
@@ -9,6 +8,9 @@ import { TickerChart } from "./TickerChart";
 import { AskClaudeButton } from "./AskClaudeButton";
 
 const STALE_AFTER_MS = 10 * 60 * 1000;
+const REFRESH_TIMEOUT_MS = 60_000;
+const RELOAD_COUNTER_KEY = "tt_refresh_reload_count";
+const MAX_RELOADS = 2;
 
 function pct(n: number | null | undefined, digits = 2): string {
   if (n === null || n === undefined) return "—";
@@ -37,43 +39,75 @@ function tickerWindowChange(t: TickerSnapshot, w: Window): number | null {
 }
 
 export function Dashboard({ digest }: { digest: Digest | null }) {
-  const router = useRouter();
   const [window, setWindow] = useState<Window>("10d");
   const [refreshing, setRefreshing] = useState(false);
   const [refreshError, setRefreshError] = useState<string | null>(null);
-  const [, startTransition] = useTransition();
   const hasKickedOffRef = useRef(false);
 
   const isStale =
     !digest || Date.now() - digest.generatedAt > STALE_AFTER_MS;
 
   useEffect(() => {
+    if (digest) {
+      sessionStorage.removeItem(RELOAD_COUNTER_KEY);
+    }
+  }, [digest]);
+
+  useEffect(() => {
     if (hasKickedOffRef.current) return;
     if (!isStale) return;
     hasKickedOffRef.current = true;
+
+    const reloadCount = Number(sessionStorage.getItem(RELOAD_COUNTER_KEY) ?? "0");
+    if (reloadCount >= MAX_RELOADS) {
+      sessionStorage.removeItem(RELOAD_COUNTER_KEY);
+      setRefreshError(
+        "Refresh completed but no data appeared in the cache. Likely a Vercel KV write/read mismatch — check /api/refresh function logs.",
+      );
+      return;
+    }
+
     let cancelled = false;
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), REFRESH_TIMEOUT_MS);
+
     (async () => {
       setRefreshing(true);
       setRefreshError(null);
       try {
-        const res = await fetch("/api/refresh", { method: "POST" });
+        const res = await fetch("/api/refresh", {
+          method: "POST",
+          signal: controller.signal,
+        });
         if (!res.ok) {
           const body = await res.json().catch(() => ({}));
           throw new Error(body.error || `HTTP ${res.status}`);
         }
-        if (!cancelled) startTransition(() => router.refresh());
-      } catch (err) {
         if (!cancelled) {
+          sessionStorage.setItem(RELOAD_COUNTER_KEY, String(reloadCount + 1));
+          location.reload();
+        }
+      } catch (err) {
+        if (cancelled) return;
+        if (err instanceof Error && err.name === "AbortError") {
+          setRefreshError(
+            `Refresh took longer than ${REFRESH_TIMEOUT_MS / 1000}s and was aborted.`,
+          );
+        } else {
           setRefreshError(err instanceof Error ? err.message : String(err));
         }
       } finally {
+        clearTimeout(timeoutId);
         if (!cancelled) setRefreshing(false);
       }
     })();
+
     return () => {
       cancelled = true;
+      controller.abort();
+      clearTimeout(timeoutId);
     };
-  }, [isStale, router]);
+  }, [isStale]);
 
   const sortedTickers = useMemo(() => {
     if (!digest) return [];
