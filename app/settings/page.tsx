@@ -4,6 +4,8 @@ import { KeyInput } from "@/components/KeyInput";
 import { WatchlistEditor } from "@/components/WatchlistEditor";
 
 export const dynamic = "force-dynamic";
+export const fetchCache = "force-no-store";
+export const revalidate = 0;
 
 export default async function SettingsPage() {
   const [watchlist, key] = await Promise.all([getWatchlist(), getClaudeApiKey()]);

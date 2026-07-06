@@ -3,6 +3,8 @@ import { kv } from "@vercel/kv";
 import { getCachedDigest, getWatchlist } from "@/lib/kv";
 
 export const dynamic = "force-dynamic";
+export const fetchCache = "force-no-store";
+export const revalidate = 0;
 
 function isAuthorized(req: NextRequest): boolean {
   const cronSecret = process.env.CRON_SECRET;
@@ -67,13 +69,15 @@ export async function GET(req: NextRequest) {
       : null;
   });
 
-  const testKey = "debug:roundtrip";
+  const testKey = `debug:roundtrip:${Date.now()}`;
   const testValue = `hello-${Date.now()}`;
   const roundtrip = await safeCall(async () => {
-    await kv.set(testKey, testValue, { ex: 60 });
+    const setResult = await kv.set(testKey, testValue, { ex: 60 });
     const readBack = await kv.get<string>(testKey);
     return {
+      key: testKey,
       wrote: testValue,
+      setResult,
       readBack,
       match: readBack === testValue,
     };

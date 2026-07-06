@@ -3,6 +3,8 @@ import { buildAndCacheDigest } from "@/lib/digest";
 import { getCachedDigest } from "@/lib/kv";
 
 export const dynamic = "force-dynamic";
+export const fetchCache = "force-no-store";
+export const revalidate = 0;
 export const maxDuration = 60;
 
 function isAuthorized(req: NextRequest): boolean {

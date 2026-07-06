@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { getRangeCandles, type ChartRange } from "@/lib/yahoo";
 
 export const dynamic = "force-dynamic";
+export const fetchCache = "force-no-store";
+export const revalidate = 0;
 
 const VALID_RANGES: ChartRange[] = ["1h", "4h", "1d", "3d", "1w"];
 

@@ -4,6 +4,8 @@ import { Dashboard } from "@/components/Dashboard";
 import { LogoutButton } from "@/components/LogoutButton";
 
 export const dynamic = "force-dynamic";
+export const fetchCache = "force-no-store";
+export const revalidate = 0;
 
 export default async function Home() {
   const digest = await getCachedDigest();

@@ -4,6 +4,8 @@ import { getCachedDigest, getClaudeApiKey } from "@/lib/kv";
 import { buildChatSystemPrompt } from "@/lib/chatContext";
 
 export const dynamic = "force-dynamic";
+export const fetchCache = "force-no-store";
+export const revalidate = 0;
 export const maxDuration = 60;
 
 const MODEL = "claude-haiku-4-5-20251001";
