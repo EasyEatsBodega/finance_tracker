@@ -2,6 +2,7 @@ import Link from "next/link";
 import { getCachedDigest } from "@/lib/kv";
 import { Dashboard } from "@/components/Dashboard";
 import { RefreshButton } from "@/components/RefreshButton";
+import { LogoutButton } from "@/components/LogoutButton";
 
 export const dynamic = "force-dynamic";
 
@@ -13,7 +14,11 @@ export default async function Home() {
       <header className="flex items-center justify-between">
         <div>
           <h1 className="text-xl font-semibold tracking-tight">Ticker Tracker</h1>
-          <p className="text-xs text-neutral-500">Personal watchlist digest</p>
+          <div className="flex items-center gap-2 text-xs text-neutral-500">
+            <span>Personal watchlist digest</span>
+            <span>·</span>
+            <LogoutButton />
+          </div>
         </div>
         <div className="flex items-center gap-3">
           <RefreshButton />
