@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { getCachedDigest } from "@/lib/kv";
 import { Dashboard } from "@/components/Dashboard";
-import { RefreshButton } from "@/components/RefreshButton";
 import { LogoutButton } from "@/components/LogoutButton";
 
 export const dynamic = "force-dynamic";
@@ -20,15 +19,12 @@ export default async function Home() {
             <LogoutButton />
           </div>
         </div>
-        <div className="flex items-center gap-3">
-          <RefreshButton />
-          <Link
-            href="/settings"
-            className="rounded-md border border-neutral-700 px-3 py-1.5 text-sm text-neutral-300 hover:bg-neutral-800"
-          >
-            Settings
-          </Link>
-        </div>
+        <Link
+          href="/settings"
+          className="rounded-md border border-neutral-700 px-3 py-1.5 text-sm text-neutral-300 hover:bg-neutral-800"
+        >
+          Settings
+        </Link>
       </header>
 
       <Dashboard digest={digest} />
