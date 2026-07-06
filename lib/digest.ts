@@ -49,12 +49,23 @@ async function buildSnapshot(ticker: string, claudeKey: string | null): Promise<
 }
 
 export async function buildAndCacheDigest(): Promise<Digest> {
+  console.log("[digest] getting watchlist and claude key");
   const [watchlist, claudeKey] = await Promise.all([getWatchlist(), getClaudeApiKey()]);
+  console.log(
+    `[digest] watchlist size=${watchlist.length} claudeKey=${claudeKey ? "set" : "unset"}`,
+  );
   const snapshots = await Promise.all(watchlist.map((t) => buildSnapshot(t, claudeKey)));
+  const withErrors = snapshots.filter((s) => s.error).length;
+  console.log(
+    `[digest] built snapshots ok=${snapshots.length - withErrors} withErrors=${withErrors}`,
+  );
   const digest: Digest = {
     generatedAt: Date.now(),
     tickers: snapshots,
   };
+  const serializedSize = JSON.stringify(digest).length;
+  console.log(`[digest] writing digest size=${serializedSize} bytes`);
   await setCachedDigest(digest);
+  console.log("[digest] write complete");
   return digest;
 }

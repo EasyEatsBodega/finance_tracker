@@ -57,11 +57,20 @@ export async function clearClaudeApiKey(): Promise<void> {
 }
 
 export async function getCachedDigest(): Promise<Digest | null> {
-  return (await kv.get<Digest>(KEYS.cachedDigest)) ?? null;
+  const raw = await kv.get<Digest | string>(KEYS.cachedDigest);
+  if (raw === null || raw === undefined) return null;
+  if (typeof raw === "string") {
+    try {
+      return JSON.parse(raw) as Digest;
+    } catch {
+      return null;
+    }
+  }
+  return raw;
 }
 
 export async function setCachedDigest(digest: Digest): Promise<void> {
-  await kv.set(KEYS.cachedDigest, digest);
+  await kv.set(KEYS.cachedDigest, JSON.stringify(digest));
 }
 
 export function maskKey(key: string | null): string | null {
