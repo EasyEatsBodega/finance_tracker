@@ -1,5 +1,8 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
+import { ChatProvider } from "@/components/ChatContext";
+import { ChatPanel } from "@/components/ChatPanel";
+import { ChatFab } from "@/components/ChatFab";
 
 export const metadata: Metadata = {
   title: "Ticker Tracker",
@@ -15,7 +18,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en">
       <body className="min-h-screen bg-neutral-950 text-neutral-100 antialiased">
-        <div className="mx-auto max-w-3xl px-4 py-6 sm:px-6 sm:py-10">{children}</div>
+        <ChatProvider>
+          <div className="mx-auto max-w-3xl px-4 py-6 sm:px-6 sm:py-10">{children}</div>
+          <ChatPanel />
+          <ChatFab />
+        </ChatProvider>
       </body>
     </html>
   );

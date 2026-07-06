@@ -4,6 +4,8 @@ import { useMemo, useState } from "react";
 import { extremeFlag } from "@/lib/screener";
 import type { Digest, TickerSnapshot, Window } from "@/lib/types";
 import { ScreenerToggle } from "./ScreenerToggle";
+import { TickerChart } from "./TickerChart";
+import { AskClaudeButton } from "./AskClaudeButton";
 
 function pct(n: number | null | undefined, digits = 2): string {
   if (n === null || n === undefined) return "—";
@@ -106,8 +108,11 @@ function TickerCard({ snapshot, activeWindow }: { snapshot: TickerSnapshot; acti
             {pct(snapshot.pctChangeToday)} today
           </span>
         </div>
-        <div className={`text-lg font-medium ${activeColor}`}>
-          {pct(activeChange, 1)} <span className="text-xs text-neutral-500">{activeWindow}</span>
+        <div className="flex items-center gap-3">
+          <div className={`text-lg font-medium ${activeColor}`}>
+            {pct(activeChange, 1)} <span className="text-xs text-neutral-500">{activeWindow}</span>
+          </div>
+          <AskClaudeButton ticker={snapshot.ticker} />
         </div>
       </header>
 
@@ -124,6 +129,8 @@ function TickerCard({ snapshot, activeWindow }: { snapshot: TickerSnapshot; acti
       {snapshot.error && (
         <p className="mt-3 text-xs text-red-400">Data error: {snapshot.error}</p>
       )}
+
+      <TickerChart ticker={snapshot.ticker} />
 
       {snapshot.headlines.length > 0 && (
         <div className="mt-3 space-y-1.5 border-t border-neutral-800 pt-3">

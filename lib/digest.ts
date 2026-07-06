@@ -1,5 +1,6 @@
 import { getClaudeApiKey, getWatchlist, setCachedDigest } from "./kv";
-import { getCompanyNews, getDailyCloses, getQuote } from "./finnhub";
+import { getCompanyNews } from "./finnhub";
+import { getDailyCloses, getQuote } from "./yahoo";
 import { computeWindowStats } from "./screener";
 import { generateTldr } from "./claude";
 import type { Digest, TickerSnapshot } from "./types";
@@ -7,21 +8,18 @@ import type { Digest, TickerSnapshot } from "./types";
 async function buildSnapshot(ticker: string, claudeKey: string | null): Promise<TickerSnapshot> {
   try {
     const [quote, closes, headlines] = await Promise.all([
-      getQuote(ticker),
+      getQuote(ticker).catch(() => ({ currentPrice: null, previousClose: null, pctChangeToday: null })),
       getDailyCloses(ticker).catch(() => [] as number[]),
       getCompanyNews(ticker).catch(() => []),
     ]);
 
-    const windows = computeWindowStats(closes.length ? closes : []);
-    const currentPrice = quote.c || null;
-    const previousClose = quote.pc || null;
-    const pctChangeToday = quote.dp ?? null;
+    const windows = computeWindowStats(closes);
 
     let tldr: string | null = null;
     if (claudeKey) {
       tldr = await generateTldr(claudeKey, {
         ticker,
-        pctChangeToday,
+        pctChangeToday: quote.pctChangeToday,
         windows,
         headlines,
       });
@@ -29,9 +27,9 @@ async function buildSnapshot(ticker: string, claudeKey: string | null): Promise<
 
     return {
       ticker,
-      currentPrice,
-      previousClose,
-      pctChangeToday,
+      currentPrice: quote.currentPrice,
+      previousClose: quote.previousClose,
+      pctChangeToday: quote.pctChangeToday,
       windows,
       tldr,
       headlines,
