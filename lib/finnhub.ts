@@ -19,50 +19,6 @@ async function get<T>(path: string, params: Record<string, string | number>): Pr
   return (await res.json()) as T;
 }
 
-type Quote = {
-  c: number; // current
-  d: number | null; // change
-  dp: number | null; // percent change
-  h: number; // high
-  l: number; // low
-  o: number; // open
-  pc: number; // previous close
-  t: number; // unix
-};
-
-export async function getQuote(ticker: string): Promise<Quote> {
-  return get<Quote>("/quote", { symbol: ticker });
-}
-
-type Candle = {
-  c: number[];
-  h: number[];
-  l: number[];
-  o: number[];
-  t: number[];
-  v: number[];
-  s: "ok" | "no_data";
-};
-
-/**
- * Daily closes over the past ~180 calendar days. Note: Finnhub's free tier
- * restricted /stock/candle for US equities in mid-2024. If this 403s, swap
- * this function to another provider (Alpha Vantage, Twelve Data) — nothing
- * else in the codebase needs to change.
- */
-export async function getDailyCloses(ticker: string, lookbackDays = 180): Promise<number[]> {
-  const to = Math.floor(Date.now() / 1000);
-  const from = to - lookbackDays * 86400;
-  const candle = await get<Candle>("/stock/candle", {
-    symbol: ticker,
-    resolution: "D",
-    from,
-    to,
-  });
-  if (candle.s !== "ok") return [];
-  return candle.c;
-}
-
 type NewsItem = {
   category: string;
   datetime: number;
