@@ -1,0 +1,32 @@
+import Link from "next/link";
+import { getCachedDigest } from "@/lib/kv";
+import { Dashboard } from "@/components/Dashboard";
+import { RefreshButton } from "@/components/RefreshButton";
+
+export const dynamic = "force-dynamic";
+
+export default async function Home() {
+  const digest = await getCachedDigest();
+
+  return (
+    <main className="space-y-6">
+      <header className="flex items-center justify-between">
+        <div>
+          <h1 className="text-xl font-semibold tracking-tight">Ticker Tracker</h1>
+          <p className="text-xs text-neutral-500">Personal watchlist digest</p>
+        </div>
+        <div className="flex items-center gap-3">
+          <RefreshButton />
+          <Link
+            href="/settings"
+            className="rounded-md border border-neutral-700 px-3 py-1.5 text-sm text-neutral-300 hover:bg-neutral-800"
+          >
+            Settings
+          </Link>
+        </div>
+      </header>
+
+      <Dashboard digest={digest} />
+    </main>
+  );
+}
