@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { buildAndCacheDigest } from "@/lib/digest";
+import { getCachedDigest } from "@/lib/kv";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -26,15 +27,34 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
   try {
+    console.log("[refresh] starting");
     const digest = await buildAndCacheDigest();
+    console.log(
+      `[refresh] built digest generatedAt=${digest.generatedAt} tickers=${digest.tickers.length}`,
+    );
+    const readBack = await getCachedDigest();
+    const readBackOk =
+      !!readBack && readBack.generatedAt === digest.generatedAt;
+    console.log(
+      `[refresh] immediate readBack found=${!!readBack} matches=${readBackOk}`,
+    );
     return NextResponse.json({
       ok: true,
       generatedAt: digest.generatedAt,
       count: digest.tickers.length,
+      firstTicker: digest.tickers[0]?.ticker ?? null,
+      firstPrice: digest.tickers[0]?.currentPrice ?? null,
+      immediateReadBack: {
+        found: !!readBack,
+        matches: readBackOk,
+        readBackGeneratedAt: readBack?.generatedAt ?? null,
+      },
     });
   } catch (err) {
+    console.error("[refresh] threw", err);
     const message = err instanceof Error ? err.message : String(err);
-    return NextResponse.json({ ok: false, error: message }, { status: 500 });
+    const stack = err instanceof Error ? err.stack : null;
+    return NextResponse.json({ ok: false, error: message, stack }, { status: 500 });
   }
 }
 
