@@ -4,7 +4,11 @@ import { useEffect, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
 import { useChat } from "./ChatContext";
 
-type Message = { role: "user" | "assistant"; content: string };
+type Message = {
+  role: "user" | "assistant";
+  content: string;
+  searched?: boolean;
+};
 
 export function ChatPanel() {
   const pathname = usePathname();
@@ -45,7 +49,14 @@ export function ChatPanel() {
       });
       const body = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(body.error || `HTTP ${res.status}`);
-      setMessages([...next, { role: "assistant", content: body.content || "(empty response)" }]);
+      setMessages([
+        ...next,
+        {
+          role: "assistant",
+          content: body.content || "(empty response)",
+          searched: !!body.usedWebSearch,
+        },
+      ]);
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
     } finally {
@@ -108,10 +119,15 @@ export function ChatPanel() {
               className={
                 m.role === "user"
                   ? "ml-8 rounded-lg bg-neutral-800 px-3 py-2 text-sm text-neutral-100"
-                  : "mr-8 whitespace-pre-wrap rounded-lg border border-neutral-800 bg-neutral-900 px-3 py-2 text-sm text-neutral-200"
+                  : "mr-8 space-y-1.5 rounded-lg border border-neutral-800 bg-neutral-900 px-3 py-2 text-sm text-neutral-200"
               }
             >
-              {m.content}
+              {m.role === "assistant" && m.searched && (
+                <div className="text-[10px] uppercase tracking-wide text-emerald-500/80">
+                  searched the web
+                </div>
+              )}
+              <div className="whitespace-pre-wrap">{m.content}</div>
             </div>
           ))}
           {sending && (

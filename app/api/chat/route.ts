@@ -9,6 +9,7 @@ export const revalidate = 0;
 export const maxDuration = 60;
 
 const MODEL = "claude-haiku-4-5-20251001";
+const MAX_TOOL_ITERATIONS = 4;
 
 type ChatMessage = { role: "user" | "assistant"; content: string };
 
@@ -32,7 +33,10 @@ export async function POST(req: NextRequest) {
   }
 
   const messages = (body.messages ?? []).filter(
-    (m) => (m.role === "user" || m.role === "assistant") && typeof m.content === "string" && m.content.length,
+    (m) =>
+      (m.role === "user" || m.role === "assistant") &&
+      typeof m.content === "string" &&
+      m.content.length,
   );
   if (!messages.length) {
     return NextResponse.json({ error: "messages required" }, { status: 400 });
@@ -42,16 +46,59 @@ export async function POST(req: NextRequest) {
   const system = buildChatSystemPrompt(digest, body.focusedTicker ?? null);
 
   const client = new Anthropic({ apiKey });
+
+  const tools = [
+    {
+      type: "web_search_20250305",
+      name: "web_search",
+      max_uses: 5,
+    },
+  ] as unknown as Anthropic.Messages.ToolUnion[];
+
   try {
-    const res = await client.messages.create({
-      model: MODEL,
-      max_tokens: 1024,
-      system,
-      messages,
+    let convo: Anthropic.Messages.MessageParam[] = messages;
+    let final: Anthropic.Messages.Message | null = null;
+    let searched = false;
+
+    for (let i = 0; i < MAX_TOOL_ITERATIONS; i++) {
+      const res = await client.messages.create({
+        model: MODEL,
+        max_tokens: 4096,
+        system,
+        tools,
+        messages: convo,
+      });
+
+      if (res.content.some((b) => b.type === "server_tool_use")) {
+        searched = true;
+      }
+
+      if (res.stop_reason === "pause_turn") {
+        convo = [...convo, { role: "assistant", content: res.content }];
+        continue;
+      }
+      final = res;
+      break;
+    }
+
+    if (!final) {
+      return NextResponse.json(
+        { error: "Chat exceeded max tool iterations without a final response." },
+        { status: 500 },
+      );
+    }
+
+    const content = final.content
+      .filter((b): b is Anthropic.Messages.TextBlock => b.type === "text")
+      .map((b) => b.text)
+      .join("\n\n")
+      .trim();
+
+    return NextResponse.json({
+      content: content || "(empty response)",
+      usedWebSearch: searched,
+      stopReason: final.stop_reason,
     });
-    const block = res.content[0];
-    const content = block && block.type === "text" ? block.text.trim() : "";
-    return NextResponse.json({ content });
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     return NextResponse.json({ error: message }, { status: 500 });
